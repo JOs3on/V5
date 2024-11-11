@@ -48,6 +48,7 @@ function invertCoinAndPcMint(tokenData) {
     const SPECIAL_COIN_MINT = "So11111111111111111111111111111111111111112";
     if (tokenData.coinMint === SPECIAL_COIN_MINT) {
         [tokenData.coinMint, tokenData.pcMint] = [tokenData.pcMint, tokenData.coinMint];
+        [tokenData.coinVault, tokenData.pcVault] = [tokenData.pcVault, tokenData.coinVault];
     }
     return tokenData;
 }
@@ -57,8 +58,8 @@ function parseCreateAmmLpParams(data) {
         discriminator: data.readUInt8(0),
         nonce: data.readUInt8(1),
         openTime: data.readBigUInt64LE(2).toString(), // Convert BigInt to string
-        initPcAmount: (data.readBigUInt64LE(10) / BigInt(10**0)).toString(), // Reduce decimals by 0
-        initCoinAmount: (data.readBigUInt64LE(18) / BigInt(10**0)).toString(), // Reduce decimals by 0
+        initPcAmount: (data.readBigUInt64LE(10) / BigInt(10 ** 0)).toString(), // Reduce decimals by 0
+        initCoinAmount: (data.readBigUInt64LE(18) / BigInt(10 ** 0)).toString(), // Reduce decimals by 0
     };
     return params;
 }
@@ -117,14 +118,14 @@ async function processRaydiumLpTransaction(connection, signature) {
 
                 let tokenData = {
                     programId: new PublicKey(accounts[accountIndices[0]]).toString(),
-                    ammId: new PublicKey(poolId).toString(),
+                    ammId: new PublicKey(poolId).toString(),//Lp address
                     ammAuthority: new PublicKey(ammAuthority).toString(),
                     ammOpenOrders: new PublicKey(ammOpenOrder).toString(),
                     lpMint: new PublicKey(lpTokenMint).toString(),
-                    coinMint: new PublicKey(mint0).toString(),
-                    pcMint: new PublicKey(mint1).toString(),
+                    coinMint: new PublicKey(mint0).toString(),//token address
+                    pcMint: new PublicKey(mint1).toString(),//SOL address
                     coinVault: new PublicKey(baseVault).toString(),
-                    pcVault: new PublicKey(quoteVault).toString(),
+                    pcVault: new PublicKey(quoteVault).toString(),//Vault containing WSOL
                     ammTargetOrders: new PublicKey(ammTarget).toString(),
                     deployer: new PublicKey(deployer).toString(),
                     systemProgramId: SYSTEM_PROGRAM_ID,
@@ -133,7 +134,8 @@ async function processRaydiumLpTransaction(connection, signature) {
                     initPcAmount: params.initPcAmount,
                     initCoinAmount: params.initCoinAmount,
                     K: (BigInt(params.initPcAmount) * BigInt(params.initCoinAmount)).toString(),
-                    V: (Math.min(Number(params.initPcAmount), Number(params.initCoinAmount)) / Math.max(Number(params.initPcAmount), Number(params.initCoinAmount))).toString(),
+                    //Add conversion from sol to usd for V
+                    V: (Math.min(Number(params.initPcAmount), Number(params.initCoinAmount)) / Math.max(Number(params.initPcAmount), Number(params.initCoinAmount))).toString() / 1000,
                 };
 
                 tokenData = invertCoinAndPcMint(tokenData);
